@@ -1,0 +1,5 @@
+include ':module_markdown'
+include ':module_reading'
+include ':lib_common'
+include ':app'
+rootProject.name = "Blog"
