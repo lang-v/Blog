@@ -29,11 +29,10 @@ fun Element.format():Array<String>{
 
 fun String.startWithSpaceNumber():Int{
     var sum = 0
-    this.forEach {
-        if (it == ' ')
+    for (i in this.indices){
+        if (get(i)==' ')
             sum++
-        else
-            return@forEach
+        else break
     }
     return sum
 }

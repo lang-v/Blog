@@ -11,7 +11,7 @@ import java.lang.StringBuilder
 
 /**
  * markdown 容器
- * 承载markdown view
+ * 承载markdown block
  */
 class MarkDownContainer @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -52,13 +52,15 @@ class MarkDownContainer @JvmOverloads constructor(
         var i = -1
         val sb = StringBuilder()
         while (++i<array.size){
-            val str = array[i].trimStart()
-            if(i==array.size-2){
-                val a = i
-                sb.append("")
-            }
+            var str = array[i]
+            str.trimStart()
             if (str.isBlank())
                 continue
+            if (str=="***"){
+                verifyCommonData(sb)
+                list.add(Block("***"))
+                continue
+            }
             //表头
             if (str.startsWith('|')){
                 val pair = verifyTable(array,i)
@@ -99,6 +101,14 @@ class MarkDownContainer @JvmOverloads constructor(
                     continue
                 }
             }
+            //图片跳转
+            if (str.startsWith('[')){
+                val pictureLink = Regex("\\[!\\[\\S*\\[\\d+]]\\[\\d+]")
+                val imgTag = getImageTag(str)
+                val linkTag = getLinkTag(str)
+                
+
+            }
             sb.append(str)
             sb.append("\n")
             continue
@@ -106,6 +116,51 @@ class MarkDownContainer @JvmOverloads constructor(
         //循环结束后检查还有没有数据
         verifyCommonData(sb)
     }
+
+
+    /**
+     * pictureLink 很特殊，大致形式：[![描述文字][图片链接]][跳转链接]
+     * 但是此处不是直接使用的图片链接，是使用的不同的tag，需要在全文检索替换链接
+     * 必须通过正则表达式检测
+     * 获取图片链接tag
+     */
+    private fun getImageTag(str: String):String{
+        var count = 0
+        val builder = StringBuilder("[")
+        for (i in str.indices){
+            if (str[i] == '[') {
+                count++
+                continue
+            }
+            if (count == 3 ){
+                builder.append(str[i])
+                if (str[i]==']')
+                    break
+            }
+        }
+        return builder.toString()
+    }
+
+    /**
+     * 获取跳转链接
+     */
+    private fun getLinkTag(str: String):String{
+        var count = 0
+        val builder = StringBuilder("[")
+        for (i in str.indices){
+            if (str[i] == '[') {
+                count++
+                continue
+            }
+            if (count == 4){
+                builder.append(str[i])
+                if (str[i]==']')
+                    break
+            }
+        }
+        return builder.toString()
+    }
+
     //发现特殊数据后将累计的普通文本，封装到块中
     private fun verifyCommonData(sb:StringBuilder){
         if (sb.isNotEmpty()){

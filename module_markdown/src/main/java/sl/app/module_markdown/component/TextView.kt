@@ -41,10 +41,10 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
         val builder = SpannableStringBuilder()
         val array = element.content.split("\n")//通过换行符切割字符串
         //这一类可以先判断，只需要判断开始字符就能得到结果
-        val title = Regex("#+ [\\s\\S]*$")//匹配标题
-        val orderList = Regex("\\d. [\\S\\s]*$")
-        val unOrderList = Regex("- [\\s\\S]*$")
-        val introduction = Regex(">[\\s\\S]*$")
+        val title = Regex("^[ |]*#+ [\\s\\S]+$")//匹配标题
+        val orderList = Regex("^[ |]*\\d+\\. [\\S\\s]+$")
+        val unOrderList = Regex("^[ |]*- [\\s\\S]+$")
+        val introduction = Regex("^[ |]*>[\\s\\S]+$")
 
         for (i in array.indices) {
             val str = array[i] + "\n"
@@ -52,7 +52,9 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
             when {
                 title.matches(str) -> {
                     title.find(str)?.let {
+                        builder.append("\n")
                         isTitle(builder, str)
+                        builder.append("\n")
                     }
                 }
                 introduction.matches(str) -> {
@@ -72,7 +74,7 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
                 }
                 else -> {
                     //以上全部未匹配那么说明是普通文本
-                    builder.append(buildLine(SpannableStringBuilder(str)))
+                    builder.append(buildLine(SpannableStringBuilder("\n"+str+"\n")))
                 }
             }
         }
@@ -94,7 +96,7 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
         val strikeThrough = Regex("~~[\\s\\S]*~~")
         checkRegexp(string, strikeThrough, ::isStrikeThrough)
         //内嵌代码
-        val inlineCode = Regex("`[\\s\\S]*`")
+        val inlineCode = Regex("`[\\S]*`")
         checkRegexp(string, inlineCode, ::isInlineCode)
         //链接,这里把图片和普通链接一起处理
         val link = Regex("(!|)\\[[\\s\\S]*]\\(http[\\S]*\\)")
@@ -158,7 +160,7 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
         if (string.length < 2) return SpannableString("")
         return SpannableString(string.substring(1, string.length - 1)).apply {
             setSpan(
-                RoundBackgroundColorSpan(Color.parseColor("#f8f8f8"), Color.WHITE),
+                RoundBackgroundColorSpan(Color.parseColor("#f8f8f8"), Color.BLACK),
                 0,
                 length,
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -186,11 +188,15 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
 
     private fun isTitle(builder: SpannableStringBuilder, string: String) {
         val span = StyleSpan(Typeface.BOLD)
-        val newStr = string.substring(string.indexOfFirst { it == ' ' })
+        val offset = string.indexOfFirst { it == ' ' }
+        val newStr = string.substring(offset)
+        //设置等级差
+        var textSize = 1.6f-(offset*0.1f)
+        if (textSize<1.1f)textSize=1.1f
         builder.append(buildLine(SpannableStringBuilder(newStr)).apply {
             setSpan(span, 0, length, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(
-                RelativeSizeSpan(1.5f),
+                RelativeSizeSpan(textSize),
                 0,
                 length,
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -204,6 +210,7 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
         })
     }
 
+    //引言
     private fun isIntroduction(builder: SpannableStringBuilder, string: String) {
         builder.append(
             buildLine(
@@ -225,10 +232,10 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
         val leadingOffset = 20
         val spaceNum = string.startWithSpaceNumber()
         val newStr = string.trimStart()
-        val offset = string.indexOfFirst { it == ' ' }
-        val span = LeadingMarginSpan.Standard(leadingOffset * spaceNum, 0)
+        val offset = newStr.indexOfFirst { it == ' ' }
+        val span = LeadingMarginSpan.Standard(leadingOffset * (spaceNum+1))
         builder.append(buildLine(SpannableStringBuilder(newStr)).apply {
-            setSpan(span, 0, offset + 1, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(span, 0, length, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(
                 ForegroundColorSpan(Color.BLACK),
                 0,
@@ -238,12 +245,12 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
             setSpan(
                 StyleSpan(Typeface.BOLD),
                 0,
-                offset + 1,
+                offset,
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             setSpan(
                 BackgroundColorSpan(Color.parseColor("#f8f8f8")),
-                0,
+                offset,
                 length,
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
             )
@@ -251,11 +258,12 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
     }
 
     private fun isUnOrderList(builder: SpannableStringBuilder, string: String) {
-        val offset = 10
+        val leadingOffset = 20
         val spaceNum = string.startWithSpaceNumber()
         val newStr = string.substringAfter("- ")
-        val span = LeadingMarginSpan.Standard(offset * spaceNum, 0)
+        val span = LeadingMarginSpan.Standard(leadingOffset * (spaceNum+1))
         builder.append(buildLine(SpannableStringBuilder(newStr)).apply {
+            setSpan(span, 0, length, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(ContextCompat.getDrawable(context.context, R.drawable.ic_dot)?.let {
                 DrawableMarginSpan(it)
             }, 0, length, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -265,7 +273,6 @@ class TextView(val context: ViewGroup, element: Element) : MarkDownView(context,
                 length,
                 SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
             )
-            setSpan(span, 0, length, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
         })
     }
 

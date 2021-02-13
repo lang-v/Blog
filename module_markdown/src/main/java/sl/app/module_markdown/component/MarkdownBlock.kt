@@ -4,12 +4,15 @@ import android.content.Context
 import android.graphics.Canvas
 import android.opengl.Visibility
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.MainThread
+import androidx.core.view.marginTop
+import androidx.core.view.setPadding
 import androidx.lifecycle.MutableLiveData
 import org.w3c.dom.Text
 import sl.app.module_markdown.bean.Block
@@ -28,6 +31,11 @@ class MarkdownBlock constructor(
 ) : LinearLayout(context, null, 0) {
     init {
         orientation = VERTICAL
+        setPadding(5,10,5,10)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = 5
+            bottomMargin = 5
+        }
         loadView()
     }
 
@@ -56,6 +64,7 @@ class MarkdownBlock constructor(
         //判断块内元素类型
         block.content.let {str->
             val it = str.trimStart()
+            Log.e("block",str)
             when {
                 //代码段
                 it.startsWith("```") -> {
@@ -70,11 +79,15 @@ class MarkdownBlock constructor(
                 it.startsWith("|") -> {
                     addView(TableView(this, TableElement(it.split('\n').toTypedArray())).getView()!!)
                 }
+                //分割线
+                it == "***" ->{
+                    addView(SplitLineView(this,Element("")).getView())
+                }
                 //文本
                 else -> {
-                    val picture = Regex("!\\[[\\s\\S]*]\\([\\s\\S]*\\)")
+                    val picture = Regex(pattern = "[ |]*!\\[[^]^\\[^\\s]*]\\([^]^\\[^)^(^\\s]*\\)")
                     //将文本中内嵌的图片给提取出来
-                    picture.findAll(it).takeIf { it -> it.count() != 0 }?.apply {
+                    picture.findAll(str).takeIf { it -> it.count() != 0 }?.apply {
                         val list = toList()
                         var start = 0
                         for (i in list.indices) {
@@ -82,19 +95,19 @@ class MarkdownBlock constructor(
                             addView(
                                 TextView(
                                     this@MarkdownBlock,
-                                    Element(it.substring(start, list[i].range.first))
+                                    Element(str.substring(start, list[i].range.first))
                                 ).getView()!!
                             )
-                            addView(ImageView(this@MarkdownBlock, it.toImageElement()).getView()!!)
+                            addView(ImageView(this@MarkdownBlock, list[i].value.toImageElement()).getView()!!)
                             start = list[i].range.last
                         }
                         if (start != it.length-1){
-                            addView(TextView(this@MarkdownBlock, Element(it.substring(start))).getView())
+                            addView(TextView(this@MarkdownBlock, Element(str.substring(start))).getView())
                         }
                         return@let
                     }
                     //没有找到图片
-                    addView(TextView(this,Element(it)).getView()!!)
+                    addView(TextView(this,Element(str)).getView()!!)
                 }
             }
         }

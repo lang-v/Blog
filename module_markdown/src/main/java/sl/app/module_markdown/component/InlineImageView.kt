@@ -20,10 +20,10 @@ class InlineImageView(context: ViewGroup, val elements: ImageElement) :
     override fun bindView(view: View) {
         view.post {
             view.findViewById<TextView>(R.id.content).text = element.content
-            if (elements.url.startsWith("http")) {
+            if (elements.imgUrl.startsWith("http")) {
                 val img = view.findViewById<ImageView>(R.id.picture)
                 Glide.with(view)
-                    .load(elements.url)
+                    .load(elements.imgUrl)
                     .into(img)
             }
         }
